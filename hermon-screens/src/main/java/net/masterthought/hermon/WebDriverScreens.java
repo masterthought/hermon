@@ -19,9 +19,9 @@ import java.util.List;
 public class WebDriverScreens {
 
     public static <T extends Screen> T init(T screen) {
-        if(screen.getClass().isAnnotationPresent(Url.class)){
+        if (screen.getClass().isAnnotationPresent(Url.class)) {
             String url = screen.getClass().getAnnotation(Url.class).value();
-            ((WebScreen)screen).setUrl(url);
+            ((WebScreen) screen).setUrl(url);
         }
         Field[] fields = screen.getClass().getFields();
         for (Field field : fields) {
@@ -33,7 +33,6 @@ public class WebDriverScreens {
         }
         return screen;
     }
-
 
 
     private static <T extends Screen> void instantiateAndRemember(T screen, Field field) throws IllegalAccessException {
@@ -61,34 +60,41 @@ public class WebDriverScreens {
     private static By getBy(Field field) {
         boolean locatorAnnotationIsPresent = field.isAnnotationPresent(LocateBy.class);
         LocateBy annotation = field.getAnnotation(LocateBy.class);
-        if(locatorAnnotationIsPresent && !annotation.id().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.ID, annotation.id());
-        }
-        if(locatorAnnotationIsPresent && !annotation.name().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.NAME, annotation.name());
-        }
-        if(locatorAnnotationIsPresent && !annotation.xpath().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.XPATH, annotation.xpath());
-        }
-        if(locatorAnnotationIsPresent && !annotation.css().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.CSS, annotation.css());
-        }
-        if(locatorAnnotationIsPresent && !annotation.className().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.CLASS_NAME, annotation.className());
-        }
-        if(locatorAnnotationIsPresent && !annotation.linkText().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.LINK_TEXT, annotation.linkText());
-        }
-        if(locatorAnnotationIsPresent && !annotation.partialLinkText().equals(LocateBy.defaultValue)) {
-            return getByFrom(How.PARTIAL_LINK_TEXT, annotation.partialLinkText());
+        if (locatorAnnotationIsPresent) {
+
+            if (isNotEqualToDefaultValue(annotation.id())) {
+                return getByFrom(How.ID, annotation.id());
+            }
+            if (isNotEqualToDefaultValue(annotation.name())) {
+                return getByFrom(How.NAME, annotation.name());
+            }
+            if (isNotEqualToDefaultValue(annotation.xpath())) {
+                return getByFrom(How.XPATH, annotation.xpath());
+            }
+            if (isNotEqualToDefaultValue(annotation.css())) {
+                return getByFrom(How.CSS, annotation.css());
+            }
+            if (isNotEqualToDefaultValue(annotation.className())) {
+                return getByFrom(How.CLASS_NAME, annotation.className());
+            }
+            if (isNotEqualToDefaultValue(annotation.linkText())) {
+                return getByFrom(How.LINK_TEXT, annotation.linkText());
+            }
+            if (isNotEqualToDefaultValue(annotation.partialLinkText())) {
+                return getByFrom(How.PARTIAL_LINK_TEXT, annotation.partialLinkText());
+            }
         }
         throw new RuntimeException("Couldn't initialize Screen");
+    }
+
+    private static boolean isNotEqualToDefaultValue(String s) {
+        return !s.equals(LocateBy.defaultValue);
     }
 
 
     private static By getByFrom(How how, String using) {
         By by = By.id("");
-        if(how == null || using == null) throw new RuntimeException("How is required in order to locate element");
+        if (how == null || using == null) throw new RuntimeException("How is required in order to locate element");
         switch (how) {
             case ID:
                 by = By.id(using);
