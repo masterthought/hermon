@@ -2,7 +2,7 @@ package net.masterthought.hermon.locators;
 
 import org.openqa.selenium.By;
 
-public class WebLocator implements Locator<By> {
+public class WebDriverLocator implements Locator<By> {
 
     private By value;
 
@@ -21,7 +21,7 @@ public class WebLocator implements Locator<By> {
         this.value = value;
     }
 
-    public WebLocator withValue(By value){
+    public WebDriverLocator withValue(By value){
         setValue(value);
         return this;
     }

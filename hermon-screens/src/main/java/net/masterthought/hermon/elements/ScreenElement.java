@@ -7,7 +7,7 @@ public class ScreenElement implements Element {
 
     private String alias;
     private String defaultValue;
-    private Locator<By> locator;
+    private Locator locator;
 
     @Override
     public String getAlias() {
@@ -20,7 +20,7 @@ public class ScreenElement implements Element {
     }
 
     @Override
-    public Locator<By> getLocator() {
+    public Locator getLocator() {
         return locator;
     }
 
@@ -34,7 +34,7 @@ public class ScreenElement implements Element {
         return this;
     }
 
-    public ScreenElement withLocator(Locator<By> locator){
+    public ScreenElement withLocator(Locator locator){
         this.locator = locator;
         return this;
     }

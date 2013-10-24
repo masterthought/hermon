@@ -2,11 +2,11 @@ package net.masterthought.hermon;
 
 import net.masterthought.hermon.annotations.Alias;
 import net.masterthought.hermon.annotations.DefaultValue;
+import net.masterthought.hermon.annotations.LocateBy;
 import net.masterthought.hermon.annotations.Url;
-import net.masterthought.hermon.annotations.Web;
 import net.masterthought.hermon.elements.Element;
 import net.masterthought.hermon.elements.ScreenElement;
-import net.masterthought.hermon.locators.WebLocator;
+import net.masterthought.hermon.locators.WebDriverLocator;
 import net.masterthought.hermon.screens.WebScreen;
 import net.masterthought.hermon.screens.Screen;
 import org.openqa.selenium.By;
@@ -16,7 +16,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
-public class WebScreenFactory {
+public class WebDriverScreens {
 
     public static <T extends Screen> T init(T screen) {
         if(screen.getClass().isAnnotationPresent(Url.class)){
@@ -35,13 +35,14 @@ public class WebScreenFactory {
     }
 
 
+
     private static <T extends Screen> void instantiateAndRemember(T screen, Field field) throws IllegalAccessException {
         String aliasValue = field.isAnnotationPresent(Alias.class) ? field.getAnnotation(Alias.class).value() : null;
         String defaultValue = field.isAnnotationPresent(DefaultValue.class) ? field.getAnnotation(DefaultValue.class).value() : null;
 
         if (isElement(field)) {
             By by = getBy(field);
-            ScreenElement screenElement = new ScreenElement().withAlias(aliasValue).withDefaultValue(defaultValue).withLocator(new WebLocator().withValue(by));
+            ScreenElement screenElement = new ScreenElement().withAlias(aliasValue).withDefaultValue(defaultValue).withLocator(new WebDriverLocator().withValue(by));
             field.set(screen, screenElement);
             screen.addScreenElement(screenElement);
         }
@@ -58,11 +59,32 @@ public class WebScreenFactory {
     }
 
     private static By getBy(Field field) {
-        boolean locatorAnnotationIsPresent = field.isAnnotationPresent(Web.class);
-        How how = locatorAnnotationIsPresent ? field.getAnnotation(Web.class).how() : null;
-        String using = locatorAnnotationIsPresent ? field.getAnnotation(Web.class).using() : null;
-        return getByFrom(how, using);
+        boolean locatorAnnotationIsPresent = field.isAnnotationPresent(LocateBy.class);
+        LocateBy annotation = field.getAnnotation(LocateBy.class);
+        if(locatorAnnotationIsPresent && !annotation.id().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.ID, annotation.id());
+        }
+        if(locatorAnnotationIsPresent && !annotation.name().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.NAME, annotation.name());
+        }
+        if(locatorAnnotationIsPresent && !annotation.xpath().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.XPATH, annotation.xpath());
+        }
+        if(locatorAnnotationIsPresent && !annotation.css().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.CSS, annotation.css());
+        }
+        if(locatorAnnotationIsPresent && !annotation.className().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.CLASS_NAME, annotation.className());
+        }
+        if(locatorAnnotationIsPresent && !annotation.linkText().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.LINK_TEXT, annotation.linkText());
+        }
+        if(locatorAnnotationIsPresent && !annotation.partialLinkText().equals(LocateBy.defaultValue)) {
+            return getByFrom(How.PARTIAL_LINK_TEXT, annotation.partialLinkText());
+        }
+        throw new RuntimeException("Couldn't initialize Screen");
     }
+
 
     private static By getByFrom(How how, String using) {
         By by = By.id("");
