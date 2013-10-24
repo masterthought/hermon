@@ -7,11 +7,6 @@ public class WebDriverLocator implements Locator<By> {
     private By value;
 
     @Override
-    public LocatorType getType() {
-        return LocatorType.WEB;
-    }
-
-    @Override
     public By value() {
         return value;
     }

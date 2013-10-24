@@ -1,7 +1,6 @@
 package net.masterthought.hermon.elements;
 
 import net.masterthought.hermon.locators.Locator;
-import org.openqa.selenium.By;
 
 public class ScreenElement implements Element {
 
