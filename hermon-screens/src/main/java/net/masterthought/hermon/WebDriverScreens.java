@@ -10,7 +10,6 @@ import net.masterthought.hermon.locators.WebDriverLocator;
 import net.masterthought.hermon.screens.WebScreen;
 import net.masterthought.hermon.screens.Screen;
 import org.openqa.selenium.By;
-import org.openqa.selenium.support.How;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -63,25 +62,25 @@ public class WebDriverScreens {
         if (locatorAnnotationIsPresent) {
 
             if (isNotEqualToDefaultValue(annotation.id())) {
-                return getByFrom(How.ID, annotation.id());
+                return By.id(annotation.id());
             }
             if (isNotEqualToDefaultValue(annotation.name())) {
-                return getByFrom(How.NAME, annotation.name());
+                return By.name(annotation.name());
             }
             if (isNotEqualToDefaultValue(annotation.xpath())) {
-                return getByFrom(How.XPATH, annotation.xpath());
+                return By.xpath(annotation.xpath());
             }
             if (isNotEqualToDefaultValue(annotation.css())) {
-                return getByFrom(How.CSS, annotation.css());
+                return By.cssSelector(annotation.css());
             }
             if (isNotEqualToDefaultValue(annotation.className())) {
-                return getByFrom(How.CLASS_NAME, annotation.className());
+                return By.className(annotation.className());
             }
             if (isNotEqualToDefaultValue(annotation.linkText())) {
-                return getByFrom(How.LINK_TEXT, annotation.linkText());
+                return By.linkText(annotation.linkText());
             }
             if (isNotEqualToDefaultValue(annotation.partialLinkText())) {
-                return getByFrom(How.PARTIAL_LINK_TEXT, annotation.partialLinkText());
+                return By.partialLinkText(annotation.partialLinkText());
             }
         }
         throw new RuntimeException("Couldn't initialize Screen");
@@ -91,34 +90,5 @@ public class WebDriverScreens {
         return !s.equals(LocateBy.defaultValue);
     }
 
-
-    private static By getByFrom(How how, String using) {
-        By by = By.id("");
-        if (how == null || using == null) throw new RuntimeException("How is required in order to locate element");
-        switch (how) {
-            case ID:
-                by = By.id(using);
-                break;
-            case NAME:
-                by = By.name(using);
-                break;
-            case CSS:
-                by = By.cssSelector(using);
-                break;
-            case CLASS_NAME:
-                by = By.className(using);
-                break;
-            case XPATH:
-                by = By.xpath(using);
-                break;
-            case LINK_TEXT:
-                by = By.linkText(using);
-                break;
-            case PARTIAL_LINK_TEXT:
-                by = By.partialLinkText(using);
-                break;
-        }
-        return by;
-    }
 }
 
