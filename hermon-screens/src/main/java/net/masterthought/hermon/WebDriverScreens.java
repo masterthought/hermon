@@ -42,7 +42,7 @@ public class WebDriverScreens {
 
         if (isElement(field)) {
             By by = getBy(field);
-            ScreenElement screenElement = new ScreenElement().withAlias(aliasValue).withDefaultValue(defaultValue).withLocator(new WebDriverLocator().withValue(by));
+            ScreenElement screenElement = new ScreenElement().withAlias(aliasValue).withDefaultValue(defaultValue).withLocator(new WebDriverLocator(by));
             field.set(screen, screenElement);
             screen.addScreenElement(screenElement);
         }

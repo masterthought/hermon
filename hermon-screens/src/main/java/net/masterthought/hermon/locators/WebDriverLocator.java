@@ -16,8 +16,7 @@ public class WebDriverLocator implements Locator<By> {
         this.value = value;
     }
 
-    public WebDriverLocator withValue(By value){
+    public WebDriverLocator(By value){
         setValue(value);
-        return this;
     }
 }
