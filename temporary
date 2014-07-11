@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>net.masterthought</groupId>
+    <artifactId>remote-grabber</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <selenium.version>2.42.0</selenium.version>
+        <cuke.version>1.1.6</cuke.version>
+        <org.springframework.version>3.2.1.RELEASE</org.springframework.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.github.detro.ghostdriver</groupId>
+            <artifactId>phantomjsdriver</artifactId>
+            <version>1.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.seleniumhq.selenium</groupId>
+                    <artifactId>selenium-remote-driver</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.seleniumhq.selenium</groupId>
+                    <artifactId>selenium-server</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-firefox-driver</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-ie-driver</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-chrome-driver</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-api</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-support</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.2.4</version>
+        </dependency>
+    </dependencies>
+</project>
+
+-- Remote grabber
+
+package net.masterthought;
+
+import com.google.common.base.Strings;
+import com.google.gson.Gson;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import javax.swing.text.html.HTML;
+import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.parser.ParserDelegator;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import javax.imageio.ImageIO;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.html.HTMLDocument;
+
+import static net.masterthought.WebHelper.waitForBodyToBeVisible;
+import static net.masterthought.WebHelper.waitForPageToLoad;
+
+public class RemoteGrabber {
+
+    private static final WebDriver driver = GhostWrapper.getDriver();
+    private static final Gson gson = new Gson();
+
+    public static List<String> getAllFrom(String webUrl) throws Exception {
+
+        List<String> allImages = new ArrayList<String>();
+        if (isImage(webUrl)) {
+            allImages.add(webUrl);
+            return allImages;
+        }
+        URL url = new URL(webUrl);
+        URLConnection connection = url.openConnection();
+        InputStream is = connection.getInputStream();
+        InputStreamReader isr = new InputStreamReader(is);
+        BufferedReader br = new BufferedReader(isr);
+
+        HTMLEditorKit htmlKit = new HTMLEditorKit();
+        HTMLDocument htmlDoc = (HTMLDocument) htmlKit.createDefaultDocument();
+        HTMLEditorKit.Parser parser = new ParserDelegator();
+        HTMLEditorKit.ParserCallback callback = htmlDoc.getReader(0);
+        parser.parse(br, callback, true);
+
+        for (HTMLDocument.Iterator iterator = htmlDoc.getIterator(HTML.Tag.IMG); iterator.isValid(); iterator.next()) {
+            AttributeSet attributes = iterator.getAttributes();
+            String imgSrc = (String) attributes.getAttribute(HTML.Attribute.SRC);
+            if (imgSrc != null && isImage(imgSrc)) {
+                try {
+                    allImages.add(getRightUrl(webUrl, imgSrc));
+                } catch (Exception ex) {
+                    System.out.println(ex.getMessage());
+                }
+            }
+        }
+        return allImages;
+    }
+
+    public synchronized static List<String> newGetAllFrom(String url) throws Exception {
+        List<String> allImages = new ArrayList<String>();
+        if (isImage(url)) {
+            allImages.add(url);
+            return allImages;
+        }
+        try {
+            loadAndWait(url);
+            List<WebElement> allElements = driver.findElements(By.xpath("//*"));
+            for (WebElement element : allElements) {
+                if (element.getTagName().equalsIgnoreCase("img")) {
+                    try {
+                        String imgSrc = element.getAttribute("src");
+                        if (imgSrc != null && isImage(imgSrc)) {
+                            String rightUrl = getRightUrl(url, imgSrc);
+                            if (allImages.indexOf(rightUrl) < 0) {
+                                System.out.printf("<img> found with %s\n", imgSrc);
+                                allImages.add(rightUrl);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                } else {
+                    String imgSrc = element.getCssValue("background-image");
+                    if (srcIsNotEmpty(imgSrc)) {
+                        imgSrc = imgSrc.replace("url(", "").replace(")", "");
+                        if (isImage(imgSrc)) {
+                            try {
+                                String rightUrl = getRightUrl(url, imgSrc);
+                                if (allImages.indexOf(rightUrl) < 0) {
+                                    System.out.printf("element found with background-image %s\n", imgSrc);
+                                    allImages.add(rightUrl);
+                                }
+                            } catch (Exception ex) {
+                                System.out.println(ex.getMessage());
+                            }
+                        }
+                    }
+                    imgSrc = element.getCssValue("background");
+                    if (srcIsNotEmpty(imgSrc)) {
+                        imgSrc = imgSrc.replace("url(", "").replace(")", "");
+                        if (isImage(imgSrc)) {
+                            try {
+                                String rightUrl = getRightUrl(url, imgSrc);
+                                if (allImages.indexOf(rightUrl) < 0) {
+                                    System.out.printf("element found with background url %s\n", imgSrc);
+                                    allImages.add(rightUrl);
+                                }
+                            } catch (Exception ex) {
+                                System.out.println(ex.getMessage());
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+        return allImages;
+    }
+
+    private static void loadAndWait(String url) throws InterruptedException {
+        driver.get(url);
+        Thread.sleep(5000);
+        waitForPageToLoad(driver);
+        Thread.sleep(5000);
+        waitForBodyToBeVisible(driver);
+        Thread.sleep(5000);
+    }
+
+    private static boolean srcIsNotEmpty(String imgSrc) {
+        return !Strings.isNullOrEmpty(imgSrc) && !imgSrc.equalsIgnoreCase("none") && imgSrc.contains("url(");
+    }
+
+    private static boolean isImage(String imgSrc) {
+        return (imgSrc.endsWith(".jpg") || (imgSrc.endsWith(".png")) || (imgSrc.endsWith(".jpeg")) || (imgSrc.endsWith(".bmp")) || (imgSrc.endsWith(".ico")));
+    }
+
+    private static String getRightUrl(String url, String imgSrc) {
+        return !(imgSrc.startsWith("http")) ? url + imgSrc : imgSrc;
+    }
+
+    private static void downloadImage(String url, String imgSrc) throws IOException {
+        url = imgSrc.startsWith("http") ? imgSrc : url + imgSrc;
+        imgSrc = imgSrc.substring(imgSrc.lastIndexOf("/") + 1);
+        BufferedImage image = ImageIO.read(new URL(url));
+        if (image != null) {
+            File file = new File(imgSrc);
+            ImageIO.write(image, imgSrc.substring(imgSrc.lastIndexOf(".") + 1), file);
+        }
+    }
+
+    public static void printAllFrom(String url) throws Exception {
+        List<String> images = newGetAllFrom(url);
+        for (String image : images) {
+            System.out.println(image);
+        }
+    }
+
+    public static String getAllAndProduceJson(String url) throws Exception {
+        List<String> allImages = newGetAllFrom(url);
+        System.out.println(allImages.size() + " found, namely: " + allImages);
+        return gson.toJson(allImages);
+    }
+
+    private static class Poller extends Thread {
+
+        private final String url;
+        private final CyclicBarrier cyclicBarrier;
+        private final Integer id;
+
+        public Poller(Integer id, CyclicBarrier cyclicBarrier, String url) {
+            super();
+            this.id = id;
+            this.cyclicBarrier = cyclicBarrier;
+            this.url = url;
+        }
+
+        public void run() {
+            try {
+                cyclicBarrier.await();
+                System.out.printf("\n\n\n\n\n%d found: \n%s", id, RemoteGrabber.getAllAndProduceJson(url));
+                cyclicBarrier.await();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+
+    public static void shutdown() {
+        driver.quit();
+    }
+}
+
+
+-- WebHelper
+package net.masterthought;
+
+import com.google.common.base.Function;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+
+public class WebHelper {
+
+    public static void waitForPageToLoad(WebDriver webDriver){
+        new WebDriverWait(webDriver,10).until(returnPageLoaded());
+    }
+
+    public static void waitForBodyToBeVisible(WebDriver webDriver){
+        new WebDriverWait(webDriver,10).until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//body")));
+    }
+
+    private static Function<WebDriver, Boolean> returnPageLoaded() {
+        return new Function<WebDriver, Boolean>() {
+            public Boolean apply(WebDriver driver) {
+                return ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete");
+            }
+        };
+    }
+}
+
+
